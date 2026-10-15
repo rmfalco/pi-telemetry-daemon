@@ -1,0 +1,9 @@
+# Build outputs
+build/
+bin/
+*.o
+*.exe
+
+# Python
+__pycache__/
+.pytest_cache/
