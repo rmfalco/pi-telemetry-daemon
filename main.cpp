@@ -1,14 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <thread>
 #include <chrono>
+#include <thread>
 
-// We will use GPIO Pin 17 (Physical Board Pin 11) from your Freenove kit layout
-const std::string GPIO_PIN = "17";
-const std::string SYSFS_GPIO_DIR = "/sys/class/gpio";
-
-void write_file(const std::string& path, const std::string& value) {
+// Helper function to write values to sysfs files
+void write_sysfs(const std::string& path, const std::string& value) {
     std::ofstream file(path);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << path << std::endl;
@@ -19,35 +16,34 @@ void write_file(const std::string& path, const std::string& value) {
 }
 
 int main() {
-    std::cout << "Initializing Embedded Linux Telemetry Daemon..." << std::endl;
+    std::cout << "System initialized. Preparing GPIO 17..." << std::endl;
 
-    // Step 1: Export the GPIO pin to the Linux sysfs pool
-    write_file(SYSFS_GPIO_DIR + "/export", GPIO_PIN);
-    
-    // Give the Linux kernel a brief moment to instantiate the virtual files
+    // 1. Export the pin (creates the gpio17 directory)
+    write_sysfs("/sys/class/gpio/export", "17");
+
+    // 2. Wait a moment for the OS to dynamically create the filesystem nodes
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Step 2: Set the pin direction to "out"
-    std::string path_direction = SYSFS_GPIO_DIR + "/gpio" + GPIO_PIN + "/direction";
-    write_file(path_direction, "out");
+    // 3. Set the direction to output
+    write_sysfs("/sys/class/gpio/gpio17/direction", "out");
 
-    std::string path_value = SYSFS_GPIO_DIR + "/gpio" + GPIO_PIN + "/value";
-    std::cout << "System initialized. Toggling GPIO " << GPIO_PIN << " (Blinking LED)..." << std::endl;
+    std::cout << "Toggling GPIO 17 (Blinking LED)..." << std::endl;
 
-    // Step 3: Loop to blink the physical LED 10 times
-    for (int i = 0; i < 10; ++i) {
-        std::cout << "LED ON" << std::endl;
-        write_file(path_value, "1"); // Set pin HIGH (3.3V)
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    // 4. Main loop to blink the LED
+    try {
+        while (true) {
+            std::cout << "LED ON" << std::endl;
+            write_sysfs("/sys/class/gpio/gpio17/value", "1");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        std::cout << "LED OFF" << std::endl;
-        write_file(path_value, "0"); // Set pin LOW (0V)
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::cout << "LED OFF" << std::endl;
+            write_sysfs("/sys/class/gpio/gpio17/value", "0");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    } catch (...) {
+        // Cleanup on exit
+        write_sysfs("/sys/class/gpio/unexport", "17");
     }
 
-    // Step 4: Clean up by unexporting the pin when done
-    write_file(SYSFS_GPIO_DIR + "/unexport", GPIO_PIN);
-    std::cout << "Daemon execution complete. Cleaning up resources." << std::endl;
-    
     return 0;
 }
