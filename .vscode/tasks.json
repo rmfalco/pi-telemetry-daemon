@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Pi Telemetry Daemon",
+            "type": "shell",
+            "command": "MSYS_NO_PATHCONV=1 docker run --rm -v /$(pwd):/workspace -w /workspace pi-compiler aarch64-linux-gnu-g++ -O2 main.cpp -o telemetry-daemon -pthread -Wl,-Bstatic -lgpiodcxx -lgpiod -Wl,-Bdynamic",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
